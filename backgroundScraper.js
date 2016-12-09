@@ -1,7 +1,7 @@
 var options = {
-    url: "http://www.rachelelizabethbridal.com/atgb-summer-1",
+    url: "http://www.rachelelizabethbridal.com/meetthedesigner",
     filter: ".filler",
-    folder: "Summer",
+    folder: "Designer",
     fullSize: false,
     //iframeIndex: null
 }
@@ -42,6 +42,45 @@ var getUrlsFromValues = function(values) {
     return urls;
 }
 
+var downloadResources = function(iframeIndex) {
+    casper.withFrame(iframeIndex, function() {
+            casper.echo('inside iframe ' + iframeIndex);
+            //var filteredElems = this.getElementsInfo(options.filter);
+            //u.dump(filteredElems);
+            var filteredStyles = this.getElementsAttribute(options.filter, 'style');
+            //u.dump(filteredStyles);
+            var backgroundProps = getAttrFromStyles(filteredStyles, 'background-image');
+            var urls = getUrlsFromValues(backgroundProps);
+            //u.dump(urls);
+
+            
+            //this.echo(didMake);
+            var subFolder = fs.makeDirectory(options.folder + '/' + 'iframe' + (iframeIndex + 1));
+            casper.echo(subFolder);
+            
+            //download all of the urls we have
+            for (var i = 0; i < urls.length; i++) {
+
+                var index = urls[i].lastIndexOf("/") + 1;
+                var fileName = urls[i].substr(index);
+                var url = urls[i];
+
+                if (options.fullSize) {
+                    var extension = urls[i].slice(urls[i].lastIndexOf('.'));
+                    var fullSize = urls[i].indexOf(extension);
+                    var fullUrl = urls[i].slice(0, fullSize + extension.length);
+                    this.echo(fullUrl);
+                    url = fullUrl;
+                }
+
+                this.download(url, options.folder + '/' + 'iframe' + iframeIndex + '/' + fileName);
+                this.echo('downloaded file ' + (i + 1) + ' out of ' + urls.length);
+            }
+            casper.echo('download complete');
+            casper.echo('finished iframe ' + iframeIndex);
+    })
+}
+
 var casper = require('casper').create({
     //verbose: true,
     //logLevel: "debug"
@@ -66,41 +105,11 @@ casper.waitForSelector('iframe', function() {
     var iframes = this.getElementsInfo('iframe');
     
     //require('utils').dump(iframes);
+    var didMake = fs.makeDirectory(options.folder);
     for (var j = 0; j < iframes.length; j++) {
-        this.withFrame(j, function() {
-            this.echo('inside iframe');
-            //var filteredElems = this.getElementsInfo(options.filter);
-            //u.dump(filteredElems);
-            var filteredStyles = this.getElementsAttribute(options.filter, 'style');
-            //u.dump(filteredStyles);
-            var backgroundProps = getAttrFromStyles(filteredStyles, 'background-image');
-            var urls = getUrlsFromValues(backgroundProps);
-            //u.dump(urls);
-
-            var didMake = fs.makeDirectory(options.folder);
-            //this.echo(didMake);
-
-            //download all of the urls we have
-            for (var i = 0; i < urls.length; i++) {
-
-                var index = urls[i].lastIndexOf("/") + 1;
-                var fileName = urls[i].substr(index);
-                var url = urls[i];
-
-                if (options.fullSize) {
-                    var extension = urls[i].slice(urls[i].lastIndexOf('.'));
-                    var fullSize = urls[i].indexOf(extension);
-                    var fullUrl = urls[i].slice(0, fullSize + extension.length);
-                    this.echo(fullUrl);
-                    url = fullUrl;
-                }
-
-                this.download(url, options.folder + '/' + fileName);
-                this.echo('downloaded file ' + (i + 1) + ' out of ' + urls.length);
-            }
-            this.echo('download complete');
-            this.echo('finished iframe ' + (j+1) + ' of ' + iframes.length);
-        });
+        this.echo('running loop ' + j + ' times');
+        
+        downloadResources(j);
     }
 });
 
